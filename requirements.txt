@@ -1,0 +1,4 @@
+pandas>=2.0.0
+pyautogui>=0.9.54
+kaggle>=1.5.16
+python-dotenv>=1.0.0

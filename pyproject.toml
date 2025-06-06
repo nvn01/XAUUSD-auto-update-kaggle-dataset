@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "kaggle-xau"
+version = "0.1.0"
+description = "Tool for updating XAUUSD Gold Price Historical Data on Kaggle"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pandas = "^2.0.0"
+pyautogui = "^0.9.54"
+kaggle = "^1.5.16"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
