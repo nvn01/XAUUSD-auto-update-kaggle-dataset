@@ -21,6 +21,7 @@ The dataset is available on Kaggle: [XAUUSD Gold Price Historical Data (2004-Pre
     cd xauusd-1m-updater
     
     # Create virtual env
+    # If missing venv: sudo apt install python3.12-venv
     python3 -m venv .venv
     source .venv/bin/activate
     
