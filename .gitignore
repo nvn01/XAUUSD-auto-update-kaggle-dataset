@@ -26,6 +26,7 @@ wheels/
 # Poetry
 .venv/
 poetry.lock
+schema_export.sql
 
 # Logs
 *.log

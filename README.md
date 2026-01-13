@@ -1,6 +1,6 @@
 # XAUUSD Gold Price Historical Data Updater
 
-This project automates the process of updating the XAUUSD (Gold) price historical data on Kaggle. It retrieves the latest data from MetaTrader, merges it with existing data, and uploads the updated dataset to Kaggle.
+This project automates the process of updating the XAUUSD (Gold) price historical data on Kaggle. It retrieves the latest 1-minute data from a PostgreSQL database, merges it with existing Kaggle data, and uploads the updated dataset back to Kaggle.
 
 ## Dataset
 
@@ -9,98 +9,59 @@ The dataset is available on Kaggle: [XAUUSD Gold Price Historical Data (2004-Pre
 ## Requirements
 
 - Python 3.8+
-- Poetry for dependency management (or pip with requirements.txt)
-- MetaTrader 4 with appropriate script for data export
+- PostgreSQL Database with `market.timeframe_1m` table
 - Kaggle API credentials
-- X11 display server for GUI automation (for MetaTrader interaction)
+- Dependencies listed in `requirements.txt`
 
 ## Setup
 
-1. Install Python virtual environment if not already installed:
-   ```bash
-   sudo apt-get install python3.11-venv
-   ```
+1. **Clone and Install Dependencies**
+    ```bash
+    git clone <your-repo-url> xauusd-1m-updater
+    cd xauusd-1m-updater
+    
+    # Create virtual env
+    python3 -m venv .venv
+    source .venv/bin/activate
+    
+    # Install dependencies
+    pip install -r requirements.txt
+    ```
 
-2. Create and activate a virtual environment:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   # Using Poetry
-   poetry install
-   
-   # OR using pip
-   pip install pandas pyautogui kaggle python-dotenv
-   ```
-
-4. Create a `.env` file with your Kaggle credentials:
-   ```
-   KAGGLE_USERNAME=your_username
-   KAGGLE_KEY=your_key
-   ```
-
-5. Set up Kaggle API credentials:
-   ```bash
-   mkdir -p ~/.kaggle
-   echo '{"username":"your_username","key":"your_key"}' > ~/.kaggle/kaggle.json
-   chmod 600 ~/.kaggle/kaggle.json
-   ```
-
-6. Install required system packages for GUI automation:
-   ```bash
-   sudo apt-get install python3-tk python3-dev xdotool
-   ```
-
-## Project Structure
-
-```
-kaggle_xau/
-├── data/                  # Directory for downloaded data
-├── new_data/              # Directory for new data from MT4
-├── merged_data/           # Directory for merged data to be uploaded
-├── upload_xau_to_kaggle.py # Main script
-├── pyproject.toml         # Poetry configuration
-├── .env                   # Environment variables (gitignored)
-└── README.md              # This file
-```
+2. **Configuration**
+    Copy `.env.example` to `.env` and fill in your details:
+    ```bash
+    cp .env.example .env
+    nano .env
+    ```
+    
+    Required Environment Variables:
+    - `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`
+    - `POSTGRES_USER`, `POSTGRES_PASSWORD`
+    - `KAGGLE_USERNAME`, `KAGGLE_KEY`
 
 ## Usage
 
-Run the script to update the dataset:
-
+Run the script manually:
 ```bash
 python upload_xau_to_kaggle.py
 ```
 
-## Automated Updates with Cron
+## Scheduling (Cron)
 
-The project is configured to run automatically on weekdays at 10:00 AM using cron:
+To run this script automatically every day at 07:00 AM WIB (UTC+7), usage `crontab -e` and add the following line.
 
-```bash
-# View current cron jobs
-crontab -l
+Note: 07:00 AM WIB is 00:00 UTC.
 
-# Edit cron jobs
-crontab -e
-
-# Example cron job (runs at 10:00 AM on weekdays)
-0 10 * * 1-5 cd /home/nvn/Project/kaggle_xau && source .venv/bin/activate && DISPLAY=:0 python upload_xau_to_kaggle.py >> /home/nvn/Project/kaggle_xau/kaggle_xau_upload.log 2>&1
+```cron
+# Run daily at 00:00 UTC (07:00 WIB)
+0 0 * * * cd /home/nvn/xauusd-1m-updater && /home/nvn/xauusd-1m-updater/.venv/bin/python3 upload_xau_to_kaggle.py >> /home/nvn/xauusd-1m-updater/kaggle_xau_upload.log 2>&1
 ```
 
-## Dataset Metadata
-
-The dataset includes the following metadata:
-- Title: XAUUSD Gold Price Historical Data 2004–Present
-- License: CC BY 4.0 (Creative Commons Attribution)
-- Temporal Coverage: 2004 to Present
-- Geospatial Coverage: Global (Gold is traded globally)
-- Creator: Novandra Anugrah
+*Adjust the paths (`/home/nvn/xauusd-1m-updater`) according to your actual installation directory on the server.*
 
 ## Troubleshooting
 
-- If the script fails to interact with MetaTrader, ensure the DISPLAY environment variable is set correctly
-- Check the log file at `kaggle_xau_upload.log` for detailed error messages
-- Verify that MetaTrader 4 is running and accessible
+- **Database Connection**: Ensure the server IP (`100.100.20.1` or similar) is accessible and firewalls allow port 5432.
+- **Kaggle API**: Ensure credentials are correct. If you see "403 Forbidden", double check your key.
+- **Logs**: Check `kaggle_xau_upload.log` for detailed execution logs.
