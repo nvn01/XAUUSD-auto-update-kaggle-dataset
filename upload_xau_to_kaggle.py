@@ -146,19 +146,42 @@ def merge_and_save(original_file, new_df, output_file):
     """
     if os.path.exists(original_file):
         logging.info(f"Reading original file: {original_file}")
-        orig_df = pd.read_csv(original_file)
+        # Try reading with semicolon delimiter
+        try:
+             # Check if file has headers or not. The error suggests it might be reading the first line as data or the header is combined
+             # "Date;Open;High;Low;Close;Volume"
+             orig_df = pd.read_csv(original_file, sep=';')
+        except Exception as e:
+             logging.warning(f"Failed to read with semicolon sep: {e}. Trying default.")
+             orig_df = pd.read_csv(original_file)
         
         # Detect Date column
-        date_col = 'Date' if 'Date' in orig_df.columns else 'Open time' # Fallback
-        if date_col not in orig_df.columns:
-            # Maybe it's index?
-            # Let's assume standard 'Date' from user screenshot implies it exists.
-            logging.warning(f"Could not find Date column in {original_file}. Columns: {orig_df.columns}")
-            # Try to infer?
-            date_col = orig_df.columns[0]
+        date_col = 'Date'
+        # Check if index 0 is 'Date' by any chance or if columns like 'Date' exist
+        if 'Date' not in orig_df.columns:
+             # Fallback: maybe the header is missing or different case?
+             # Based on error: Index(['Date;Open;High;Low;Close;Volume'], dtype='object')
+             # It seems if sep is wrong it loads everything into one column.
+             # If we fixed sep, we should see columns.
+             if len(orig_df.columns) == 1:
+                  # Force semicolon again if read_csv failed to detect
+                  logging.info("Only 1 column detected. Forcing semicolon split.")
+                  orig_df = pd.read_csv(original_file, sep=';')
+
+        if date_col not in orig_df.columns and 'Open time' in orig_df.columns:
+            date_col = 'Open time'
             
-        # Parse dates
-        orig_df[date_col] = pd.to_datetime(orig_df[date_col])
+        logging.info(f"Columns found: {orig_df.columns}")
+            
+        # Parse dates with specific format if standard fails
+        # Format seen in error: 2004.06.11 07:18
+        try:
+            orig_df[date_col] = pd.to_datetime(orig_df[date_col], format='%Y.%m.%d %H:%M')
+        except:
+             logging.warning("Standard format failed, trying auto-parse")
+             orig_df[date_col] = pd.to_datetime(orig_df[date_col])
+             
+        # Ensure new_df matches format for merging (which is CSV write default)
         new_df['Date'] = pd.to_datetime(new_df['Date'])
         
         # Rename new_df date col if needed to match original
