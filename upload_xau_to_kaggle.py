@@ -316,6 +316,14 @@ def main():
         logging.error(f"Error reading existing CSV: {e}")
         last_date = datetime(2000, 1, 1) # Default far past
 
+    # If last_data is default (2000), it means we failed to parse or file is empty.
+    # In this case, we shouldn't try to fetch EVERYTHING from the DB unless explicitly wanted.
+    # But for now, let's respect the last_date. 
+    
+    # MEMORY OPTIMIZATION:
+    # Instead of fetching everything, let's verify if we need to.
+    logging.info(f"Last detected date: {last_date}")
+    
     # 5. Fetch from DB
     new_data = fetch_new_data(last_date)
     
@@ -324,11 +332,14 @@ def main():
     has_updates = False
     
     if new_data is not None and not new_data.empty:
+        # Optimization: Only load original if we actually have new data to merge
+        # And we already loaded it partially to check date.
+        # To avoid reading whole file again if it's huge, we can append if we are sure.
+        # But for safety, let's read/concat.
         merge_and_save(local_file_path, new_data, output_path)
         has_updates = True
     else:
         logging.info("No new data to merge. Skipping upload.")
-        # If no new data, we can exit early.
         return
 
     # 7. Metadata
@@ -340,6 +351,12 @@ def main():
             api = KaggleApi()
             api.authenticate()
             version_notes = f"Auto-update: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            
+            # 401 Unauthorized usually means Key/User is wrong OR the token is expired/invalid.
+            # It can also happen if we try to upload to a dataset we don't own (slug mismatch).
+            # Double check slug: novandraanugrah/xauusd-gold-price-historical-data-2004present
+            
+            logging.info(f"Uploading to {DATASET_SLUG}...")
             api.dataset_create_version(
                 folder=MERGED_FOLDER,
                 version_notes=version_notes,
@@ -348,6 +365,9 @@ def main():
             logging.info("Upload initiated successfully.")
         except Exception as e:
             logging.error(f"Upload failed: {e}")
+            # If 401, hint user
+            if "401" in str(e):
+                 logging.error("Check KAGGLE_USERNAME and KAGGLE_KEY in .env. Ensure they match your account.")
     
 if __name__ == "__main__":
     main()
