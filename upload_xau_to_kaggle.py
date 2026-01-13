@@ -297,29 +297,33 @@ def main():
     
     # 6. Merge
     output_path = os.path.join(MERGED_FOLDER, target_file_name)
+    has_updates = False
+    
     if new_data is not None and not new_data.empty:
         merge_and_save(local_file_path, new_data, output_path)
+        has_updates = True
     else:
-        logging.info("No new data to merge. Just copying existing.")
-        import shutil
-        shutil.copy(local_file_path, output_path)
+        logging.info("No new data to merge. Skipping upload.")
+        # If no new data, we can exit early.
+        return
 
     # 7. Metadata
     setup_metadata(DATA_FOLDER, MERGED_FOLDER)
 
     # 8. Upload
-    try:
-        api = KaggleApi()
-        api.authenticate()
-        version_notes = f"Auto-update: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        api.dataset_create_version(
-            folder=MERGED_FOLDER,
-            version_notes=version_notes,
-            dir_mode=True
-        )
-        logging.info("Upload initiated successfully.")
-    except Exception as e:
-        logging.error(f"Upload failed: {e}")
-
+    if has_updates:
+        try:
+            api = KaggleApi()
+            api.authenticate()
+            version_notes = f"Auto-update: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            api.dataset_create_version(
+                folder=MERGED_FOLDER,
+                version_notes=version_notes,
+                dir_mode=True
+            )
+            logging.info("Upload initiated successfully.")
+        except Exception as e:
+            logging.error(f"Upload failed: {e}")
+    
 if __name__ == "__main__":
     main()
