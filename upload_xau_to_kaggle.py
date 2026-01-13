@@ -308,10 +308,30 @@ def main():
     # 4. Determine missing range
     # Get last date from CSV
     try:
-        df_existing = pd.read_csv(local_file_path)
-        date_col = 'Date' if 'Date' in df_existing.columns else df_existing.columns[0]
-        df_existing[date_col] = pd.to_datetime(df_existing[date_col])
-        last_date = df_existing[date_col].max()
+        if os.path.exists(local_file_path):
+            try:
+                df_existing = pd.read_csv(local_file_path, sep=';')
+            except:
+                df_existing = pd.read_csv(local_file_path)
+            
+            date_col = 'Date'
+            if date_col not in df_existing.columns:
+                 # Check if headers are messed up or another name
+                 if len(df_existing.columns) == 1:
+                      # Try force reading again if comma failed previously (though we tried semi first)
+                      pass
+                 elif 'Open time' in df_existing.columns:
+                      date_col = 'Open time'
+            
+            # Parse with explicit format first
+            try:
+                df_existing[date_col] = pd.to_datetime(df_existing[date_col], format='%Y.%m.%d %H:%M')
+            except:
+                df_existing[date_col] = pd.to_datetime(df_existing[date_col])
+                
+            last_date = df_existing[date_col].max()
+        else:
+            last_date = datetime(2000, 1, 1)
     except Exception as e:
         logging.error(f"Error reading existing CSV: {e}")
         last_date = datetime(2000, 1, 1) # Default far past
