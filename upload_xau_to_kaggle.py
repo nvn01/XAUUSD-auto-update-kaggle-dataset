@@ -13,17 +13,49 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Manually ensure Kaggle environment variables are set from .env
-if os.getenv("KAGGLE_API_TOKEN"):
-    os.environ["KAGGLE_API_TOKEN"] = os.getenv("KAGGLE_API_TOKEN")
-    # If using Token, we often don't need Username/Key. 
-    # But just in case, let's leave them if they are set, but NOT overwrite Key with Token.
-    # The library (v1.6+) should prefer Token if present.
+def setup_kaggle_config():
+    """
+    Manually create kaggle.json if it doesn't exist, using credentials from .env.
+    This resolves issues where the library fails to pick up environment variables.
+    """
+    username = os.getenv("KAGGLE_USERNAME")
+    # Support both old KAGGLE_KEY and new KAGGLE_API_TOKEN
+    key = os.getenv("KAGGLE_KEY") or os.getenv("KAGGLE_API_TOKEN")
+    
+    if not username or not key:
+        logging.warning("KAGGLE_USERNAME or KAGGLE_KEY/KAGGLE_API_TOKEN not found in .env. Auth might fail.")
+        return
 
-if os.getenv("KAGGLE_USERNAME"):
-    os.environ["KAGGLE_USERNAME"] = os.getenv("KAGGLE_USERNAME")
-if os.getenv("KAGGLE_KEY"):
-    os.environ["KAGGLE_KEY"] = os.getenv("KAGGLE_KEY")
+    # Standard configuration paths
+    # Linux: ~/.config/kaggle/kaggle.json or ~/.kaggle/kaggle.json
+    # We will try to match what the error message suggested: /root/.config/kaggle
+    
+    home = os.path.expanduser("~")
+    config_dir = os.path.join(home, ".config", "kaggle")
+    config_file = os.path.join(config_dir, "kaggle.json")
+    
+    # Also create in legacy path just in case
+    legacy_dir = os.path.join(home, ".kaggle")
+    legacy_file = os.path.join(legacy_dir, "kaggle.json")
+
+    # If neither exists, create one
+    if not os.path.exists(config_file) and not os.path.exists(legacy_file):
+        try:
+            logging.info(f"Creating Kaggle config at {config_file}...")
+            os.makedirs(config_dir, exist_ok=True)
+            with open(config_file, 'w') as f:
+                json.dump({"username": username, "key": key}, f)
+            # Set permissions to 600 (required by some versions)
+            os.chmod(config_file, 0o600)
+            
+            # Also set env vars just to be double sure
+            os.environ["KAGGLE_USERNAME"] = username
+            os.environ["KAGGLE_KEY"] = key
+        except Exception as e:
+            logging.warning(f"Failed to create config file: {e}")
+
+# Run setup
+setup_kaggle_config()
 
 from kaggle.api.kaggle_api_extended import KaggleApi
 
