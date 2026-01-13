@@ -14,28 +14,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Manually ensure Kaggle environment variables are set from .env
-# The library checks os.environ, so we can force them if load_dotenv didn't export them (though it should).
-# Also handle the new KAGGLE_API_TOKEN variable mapping.
 if os.getenv("KAGGLE_API_TOKEN"):
-    # If the new token format is used, we can set KAGGLE_USERNAME and KAGGLE_KEY manually 
-    # OR rely on library support. But library usually expects KAGGLE_USERNAME and KAGGLE_KEY.
-    # Actually, KAGGLE_API_TOKEN is usually for the *whole* json content? 
-    # No, usually it's just the key. But user said "KGAT_..." is the token.
-    # The new Kaggle logic often wants KAGGLE_USERNAME and KAGGLE_KEY still.
-    # Let's check what user has. Env has KAGGLE_USERNAME and KAGGLE_API_TOKEN.
-    # We might need to map KAGGLE_API_TOKEN to KAGGLE_KEY for the library to be happy if it's older logic?
-    # BUT, we bumped to 1.6.0.
-    
-    # Official docs say: export KAGGLE_USERNAME=datadinosaur export KAGGLE_KEY=xxxxxxxxxxxxxx
-    # KAGGLE_API_TOKEN might be a new single-var auth?
-    # Actually... if user provides `KAGGLE_API_TOKEN` which they copy pasted, does it contain "username":"..."?
-    # No, it's a string "KGAT_...".
-    
-    # Let's TRY setting KAGGLE_KEY to that token if KAGGLE_KEY is empty.
-    if not os.getenv("KAGGLE_KEY"):
-         os.environ["KAGGLE_KEY"] = os.getenv("KAGGLE_API_TOKEN")
+    os.environ["KAGGLE_API_TOKEN"] = os.getenv("KAGGLE_API_TOKEN")
+    # If using Token, we often don't need Username/Key. 
+    # But just in case, let's leave them if they are set, but NOT overwrite Key with Token.
+    # The library (v1.6+) should prefer Token if present.
 
-# Ensure they are in os.environ for the library
 if os.getenv("KAGGLE_USERNAME"):
     os.environ["KAGGLE_USERNAME"] = os.getenv("KAGGLE_USERNAME")
 if os.getenv("KAGGLE_KEY"):
