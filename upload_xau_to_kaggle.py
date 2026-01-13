@@ -25,6 +25,11 @@ def setup_kaggle_config():
     if not username or not key:
         logging.warning("KAGGLE_USERNAME or KAGGLE_KEY/KAGGLE_API_TOKEN not found in .env. Auth might fail.")
         return
+    
+    # IMPORTANT: Strip the KGAT_ prefix if present - the old API expects just the hex key
+    if key.startswith("KGAT_"):
+        key = key[5:]  # Remove "KGAT_" prefix
+        logging.info("Stripped KGAT_ prefix from token")
 
     # Standard configuration paths
     # Linux: ~/.config/kaggle/kaggle.json or ~/.kaggle/kaggle.json
