@@ -9,10 +9,11 @@ import pandas as pd
 import psycopg2
 from datetime import datetime
 from dotenv import load_dotenv
-from kaggle.api.kaggle_api_extended import KaggleApi
 
 # Load environment variables
 load_dotenv()
+
+from kaggle.api.kaggle_api_extended import KaggleApi
 
 # Configuration
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
