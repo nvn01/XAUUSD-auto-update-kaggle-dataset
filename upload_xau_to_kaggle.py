@@ -195,30 +195,35 @@ def merge_and_save(original_file, new_df, output_file):
     """
     if os.path.exists(original_file):
         logging.info(f"Reading original file: {original_file}")
-        # Try reading with semicolon delimiter
-        try:
-             # Check if file has headers or not. The error suggests it might be reading the first line as data or the header is combined
-             # "Date;Open;High;Low;Close;Volume"
-             orig_df = pd.read_csv(original_file, sep=';')
-        except Exception as e:
-             logging.warning(f"Failed to read with semicolon sep: {e}. Trying default.")
-             orig_df = pd.read_csv(original_file)
+        
+        # Smart delimiter detection: read first line and check
+        with open(original_file, 'r') as f:
+            first_line = f.readline()
+        
+        # Detect delimiter by checking what separates the header
+        if ';' in first_line and ',' not in first_line:
+            sep = ';'
+        else:
+            sep = ','  # Default to comma
+        
+        logging.info(f"Detected delimiter: '{sep}'")
+        orig_df = pd.read_csv(original_file, sep=sep)
         
         # Detect Date column
         date_col = 'Date'
-        # Check if index 0 is 'Date' by any chance or if columns like 'Date' exist
         if 'Date' not in orig_df.columns:
-             # Fallback: maybe the header is missing or different case?
-             # Based on error: Index(['Date;Open;High;Low;Close;Volume'], dtype='object')
-             # It seems if sep is wrong it loads everything into one column.
-             # If we fixed sep, we should see columns.
-             if len(orig_df.columns) == 1:
-                  # Force semicolon again if read_csv failed to detect
-                  logging.info("Only 1 column detected. Forcing semicolon split.")
-                  orig_df = pd.read_csv(original_file, sep=';')
-
-        if date_col not in orig_df.columns and 'Open time' in orig_df.columns:
-            date_col = 'Open time'
+            # Check for alternative column names
+            if 'Open time' in orig_df.columns:
+                date_col = 'Open time'
+            elif len(orig_df.columns) == 1:
+                # Wrong delimiter was used, try the other one
+                other_sep = ',' if sep == ';' else ';'
+                logging.info(f"Only 1 column detected. Retrying with '{other_sep}'")
+                orig_df = pd.read_csv(original_file, sep=other_sep)
+                if 'Date' in orig_df.columns:
+                    date_col = 'Date'
+                elif 'Open time' in orig_df.columns:
+                    date_col = 'Open time'
             
         logging.info(f"Columns found: {orig_df.columns}")
             
@@ -358,19 +363,27 @@ def main():
     # Get last date from CSV
     try:
         if os.path.exists(local_file_path):
-            try:
-                df_existing = pd.read_csv(local_file_path, sep=';')
-            except:
-                df_existing = pd.read_csv(local_file_path)
+            # Smart delimiter detection
+            with open(local_file_path, 'r') as f:
+                first_line = f.readline()
+            
+            if ';' in first_line and ',' not in first_line:
+                sep = ';'
+            else:
+                sep = ','
+            
+            df_existing = pd.read_csv(local_file_path, sep=sep)
             
             date_col = 'Date'
             if date_col not in df_existing.columns:
-                 # Check if headers are messed up or another name
-                 if len(df_existing.columns) == 1:
-                      # Try force reading again if comma failed previously (though we tried semi first)
-                      pass
-                 elif 'Open time' in df_existing.columns:
-                      date_col = 'Open time'
+                if 'Open time' in df_existing.columns:
+                    date_col = 'Open time'
+                elif len(df_existing.columns) == 1:
+                    # Try other delimiter
+                    other_sep = ',' if sep == ';' else ';'
+                    df_existing = pd.read_csv(local_file_path, sep=other_sep)
+                    if 'Open time' in df_existing.columns:
+                        date_col = 'Open time'
             
             # Parse with explicit format first
             try:
